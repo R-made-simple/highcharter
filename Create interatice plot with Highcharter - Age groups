@@ -1,0 +1,48 @@
+library(tidyverse)
+library(highcharter)
+library(readxl)
+
+# Import data
+europe_agegroup <- read_excel("Datasets/europe_agegroup.xlsx")
+
+view(europe_agegroup)
+
+# Group data by agegroup and summarize for each year
+europe_agegroup <- europe_agegroup %>% 
+  group_by(agegroup, year, country) %>% 
+  summarise(
+    population = sum(population, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Create a new variable called change (%)
+europe_agegroup <- europe_agegroup %>%
+  arrange(country, agegroup, year) %>% 
+  group_by(country, agegroup) %>% 
+  mutate(
+    change = round((population / lag(population) - 1) * 100, 1)
+  )
+
+# Filter dataset to France and create a plot showing the change in population from 1960 to 2023
+highchart() %>% 
+  hc_add_series(
+    type = "line",
+    data = europe_agegroup %>% 
+      filter(country == "France"),
+    hcaes(x = year, y = change, group = agegroup)
+  ) %>% 
+  hc_title(text = "France") %>% 
+  hc_subtitle(text = "Population growth 1960 - 2023 (%)")
+
+
+# Compare population change between France and Germany
+highchart() %>% 
+  hc_add_series(
+    type = "line",
+    data = europe_agegroup %>% 
+      filter(
+        country %in% c("France", "Germany"),
+        agegroup == "70 years old and over"
+      ),
+    hcaes(x = year, y = change, group = country)
+  )
